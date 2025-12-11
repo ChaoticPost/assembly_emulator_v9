@@ -20,7 +20,7 @@ class TaskManager:
             2: {
                 "id": 2,
                 "title": "Свертка двух массивов",
-                "description": "Вычислить свертку двух массивов по 10 элементов каждый. Результат сохранить в память по адресу 0x1100.",
+                "description": "Вычислить свертку двух массивов по 3 элемента каждый. Массив A хранится в памяти начиная с адреса 0x0200, массив B - с адреса 0x0300. Размер каждого массива хранится по адресам 0x0200 и 0x0300 соответственно. Результат сохранить в аккумулятор ACC.",
                 "program": self._get_convolution_program(),
                 "test_data": self._generate_convolution_test_data()
             }
@@ -122,50 +122,255 @@ HALT               ; остановка программы
     def _get_convolution_program(self) -> str:
         """Программа для свертки двух массивов"""
         return """
-; Программа для вычисления свертки двух массивов
+; Программа для вычисления свертки двух массивов (одноадресная архитектура)
 ; Массив A: [10, 2, 3, 1, 4, 5, 2, 3, 1, 4, 2] (размер=10, элементы: 2, 3, 1, 4, 5, 2, 3, 1, 4, 2)
 ; Массив B: [10, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1] (размер=10, элементы: 1, 2, 3, 1, 2, 3, 1, 2, 3, 1)
 ; Ожидаемый результат: 2*1 + 3*2 + 1*3 + 4*1 + 5*2 + 2*3 + 3*1 + 1*2 + 4*3 + 2*1 = 50
+; Результат сохраняется в ACC (аккумулятор)
 
-; Инициализация
-LDI R0, 0          ; R0 = 0 (аккумулятор для свертки)
-LDI R1, 1          ; R1 = 1 (индекс, начинается с 1, так как [0x0200] и [0x0300] - размеры)
-LDI R2, 0x0200     ; R2 = базовый адрес массива A
-LDI R3, 0x0300     ; R3 = базовый адрес массива B
+; Распределение памяти для переменных:
+; 0x0400 - константа 1
+; 0x0401 - размер массива
+; 0x0402 - индекс i (начинается с 1)
+; 0x0403 - размер + 1 (для сравнения)
+; 0x0411 - значение A[i]
+; 0x0412 - значение B[i]
+; 0x0413 - произведение A[i] × B[i]
+; 0x0414 - текущая свертка (результат)
+; 0x0420 - временная переменная для сравнения
 
-; Загрузка размера массивов (размеры должны быть одинаковыми)
-LDR R4, [0x0200]   ; R4 = размер массива A (из [0x0200])
+; Инициализация констант
+LDI 1              ; ACC = 1
+STA 0x0400         ; сохранить константу 1 в 0x0400
+
+; Инициализация свертки (результат = 0)
+LDI 0              ; ACC = 0
+STA 0x0414         ; свертка = 0
+
+; Инициализация индекса i = 1
+LDI 1              ; ACC = 1
+STA 0x0402         ; индекс i = 1
+
+; Загрузить размер массива A из [0x0200]
+LDA 0x0200         ; ACC = размер массива A (10)
+STA 0x0401         ; сохранить размер в 0x0401
 
 ; Основной цикл свертки
 LOOP_START:
-; Сравниваем индекс с (размер + 1)
-; Если индекс == размер + 1, значит обработали все элементы, выходим
-ADD R5, R4, 1      ; R5 = размер + 1
-CMP R1, R5         ; Сравнить индекс с (размер + 1)
-JZ LOOP_END        ; Если индекс == размер + 1, выйти из цикла
+; Проверка условия выхода: индекс > размер
+LDA 0x0401         ; ACC = размер
+ADD 0x0400         ; ACC = размер + 1
+STA 0x0403         ; сохранить (размер + 1) в 0x0403
+LDA 0x0402         ; ACC = индекс i
+CMP 0x0403         ; сравнить индекс с (размер + 1)
+JZ LOOP_END        ; если индекс == размер + 1, выйти из цикла
 
-; Вычисляем адрес текущего элемента массива A: базовый_адрес_A + индекс
-ADD R6, R2, R1     ; R6 = 0x0200 + индекс (адрес элемента A)
-LDRR R7, [R6]      ; R7 = A[i] (значение элемента массива A)
+; Загружаем A[i] через таблицу переходов
+LDA 0x0402         ; ACC = индекс i
+CMP 0x0400         ; сравнить с 1
+JZ LOAD_A_1
+LDI 2
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_2
+LDI 3
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_3
+LDI 4
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_4
+LDI 5
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_5
+LDI 6
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_6
+LDI 7
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_7
+LDI 8
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_8
+LDI 9
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_9
+LDI 10
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_A_10
+JMP INCREMENT_INDEX
 
-; Вычисляем адрес текущего элемента массива B: базовый_адрес_B + индекс
-ADD R6, R3, R1     ; R6 = 0x0300 + индекс (адрес элемента B)
-LDRR R6, [R6]      ; R6 = B[i] (значение элемента массива B)
+; Загрузка элементов массива A
+LOAD_A_1:
+LDA 0x0201
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_2:
+LDA 0x0202
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_3:
+LDA 0x0203
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_4:
+LDA 0x0204
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_5:
+LDA 0x0205
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_6:
+LDA 0x0206
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_7:
+LDA 0x0207
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_8:
+LDA 0x0208
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_9:
+LDA 0x0209
+STA 0x0411
+JMP LOAD_B_ELEMENT
+LOAD_A_10:
+LDA 0x020A
+STA 0x0411
+JMP LOAD_B_ELEMENT
 
-; Умножение A[i] × B[i]
-MUL R7, R7, R6     ; R7 = A[i] × B[i]
+; Загрузка элементов массива B
+LOAD_B_ELEMENT:
+LDA 0x0402         ; ACC = индекс i
+CMP 0x0400         ; сравнить с 1
+JZ LOAD_B_1
+LDI 2
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_2
+LDI 3
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_3
+LDI 4
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_4
+LDI 5
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_5
+LDI 6
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_6
+LDI 7
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_7
+LDI 8
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_8
+LDI 9
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_9
+LDI 10
+STA 0x0420
+LDA 0x0402
+CMP 0x0420
+JZ LOAD_B_10
+JMP INCREMENT_INDEX
 
-; Добавляем произведение к свертке
-ADD R0, R0, R7     ; R0 = R0 + A[i] × B[i] (свертка)
+LOAD_B_1:
+LDA 0x0301
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_2:
+LDA 0x0302
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_3:
+LDA 0x0303
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_4:
+LDA 0x0304
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_5:
+LDA 0x0305
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_6:
+LDA 0x0306
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_7:
+LDA 0x0307
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_8:
+LDA 0x0308
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_9:
+LDA 0x0309
+STA 0x0412
+JMP MULTIPLY
+LOAD_B_10:
+LDA 0x030A
+STA 0x0412
+JMP MULTIPLY
+
+; Умножение A[i] × B[i] и добавление к свертке
+MULTIPLY:
+LDA 0x0411         ; ACC = A[i]
+MUL 0x0412         ; ACC = A[i] × B[i]
+STA 0x0413         ; сохранить произведение в 0x0413
+LDA 0x0414         ; ACC = текущая свертка
+ADD 0x0413         ; ACC = свертка + A[i] × B[i]
+STA 0x0414         ; сохранить новую свертку
 
 ; Увеличиваем индекс
-ADD R1, R1, 1      ; R1 = R1 + 1
-
-JMP LOOP_START     ; Переход к началу цикла
+INCREMENT_INDEX:
+LDA 0x0402         ; ACC = индекс i
+ADD 0x0400         ; ACC = индекс + 1
+STA 0x0402         ; сохранить новый индекс
+JMP LOOP_START     ; переход к началу цикла
 
 LOOP_END:
-; Результат в R0 (аккумулятор)
-HALT
+; Результат в ACC (загружаем из 0x0414)
+LDA 0x0414         ; ACC = результат свертки
+HALT               ; остановка программы
         """.strip()
     
     def _generate_sum_test_data(self) -> List[int]:
@@ -177,12 +382,12 @@ HALT
     
     def _generate_convolution_test_data(self) -> List[int]:
         """Генерирует тестовые данные для свертки массивов"""
-        # Массив A: [2, 3, 1, 4, 5, 2, 3, 1, 4, 2]
-        a_vals = [2, 3, 1, 4, 5, 2, 3, 1, 4, 2]
-        # Массив B: [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]
-        b_vals = [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]
-        # Ожидаемый результат: 2*1 + 3*2 + 1*3 + 4*1 + 5*2 + 2*3 + 3*1 + 1*2 + 4*3 + 2*1 = 50
-        return [10, *a_vals, 10, *b_vals]  # 10 - размер каждого массива
+        # Массив A: [2, 3, 1] (размер=3)
+        a_vals = [2, 3, 1]
+        # Массив B: [1, 2, 3] (размер=3)
+        b_vals = [1, 2, 3]
+        # Ожидаемый результат: 2*1 + 3*2 + 1*3 = 2 + 6 + 3 = 11
+        return [3, *a_vals, 3, *b_vals]  # 3 - размер каждого массива
     
     def setup_task_data(self, processor: RISCProcessor, task_id: int):
         """Настроить данные для задачи в процессоре"""
@@ -482,8 +687,8 @@ HALT
                 # Вычисляем ожидаемую свертку: Σ(A[i] × B[i])
                 expected_conv = sum(a_vals[i] * b_vals[i] for i in range(min(len(a_vals), len(b_vals))))
                 
-                # Получаем результат из R0 (аккумулятор)
-                actual_conv = processor.processor.registers[0]
+                # Получаем результат из ACC (аккумулятор) - одноадресная архитектура
+                actual_conv = processor.processor.accumulator
                 
                 result["expected"] = expected_conv
                 result["actual"] = actual_conv
