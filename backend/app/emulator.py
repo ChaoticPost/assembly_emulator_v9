@@ -1,5 +1,5 @@
 """
-Эмулятор двухадресного RISC процессора с архитектурой Фон-Неймана
+Эмулятор одноадресного RISC процессора с архитектурой Фон-Неймана
 """
 from typing import List, Dict, Optional, Any
 from .processor import RISCProcessor
@@ -9,7 +9,7 @@ from .models import EmulatorState, ProcessorState, MemoryState
 from .processor import RISCProcessor
 
 class RISCEmulator:
-    """Эмулятор двухадресного RISC процессора"""
+    """Эмулятор одноадресного RISC процессора"""
     
     def __init__(self, memory_size: int = 8192):
         self.processor = RISCProcessor(memory_size)
@@ -213,82 +213,59 @@ class RISCEmulator:
                     print(f"DEBUG load_task: Память восстановлена после load_program, length={len(self.processor.memory.ram)}")
             
             # Настраиваем данные задачи (ВАЖНО: после load_program, чтобы память не сбросилась)
-            # Для задач 1 и 2 НЕ записываем данные в память при загрузке - они будут записаны при первом execute_step
+            # Для задач 1 и 2 НЕ записываем данные сразу - они будут записываться постепенно в execute_step
             if task_id == 1 or task_id == 2:
-                # Для задач 1 и 2 сохраняем данные задачи, но НЕ записываем их в память
-                # Данные будут записаны при первом execute_step перед выполнением команды
-                pass
+                # Подготавливаем память нужного размера, но НЕ записываем данные
+                test_data = task["test_data"]
+                if test_data and len(test_data) >= 2:
+                    if task_id == 1:
+                        size = test_data[0]
+                        elements = test_data[1:1 + size]
+                        expected_data = [size] + elements
+                        required_size = 0x0100 + len(expected_data) + 1
+                        # Расширяем память до нужного размера
+                        if len(self.processor.memory.ram) < required_size:
+                            new_ram = list(self.processor.memory.ram) if self.processor.memory.ram else [0] * required_size
+                            while len(new_ram) < required_size:
+                                new_ram.append(0)
+                            self.processor.memory.ram = new_ram
+                        # Очищаем область данных задачи (0x0100 и далее)
+                        new_ram = list(self.processor.memory.ram)
+                        for i in range(len(expected_data)):
+                            addr = 0x0100 + i
+                            if addr < len(new_ram):
+                                new_ram[addr] = 0
+                        self.processor.memory.ram = new_ram
+                    elif task_id == 2:
+                        size_a = test_data[0]
+                        a_vals = test_data[1:1 + size_a]
+                        size_b = test_data[1 + size_a]
+                        b_vals = test_data[2 + size_a:2 + size_a + size_b]
+                        required_size = max(0x020A, 0x030A) + 2
+                        # Расширяем память до нужного размера
+                        if len(self.processor.memory.ram) < required_size:
+                            new_ram = list(self.processor.memory.ram) if self.processor.memory.ram else [0] * required_size
+                            while len(new_ram) < required_size:
+                                new_ram.append(0)
+                            self.processor.memory.ram = new_ram
+                        # Очищаем область данных задачи (0x0200-0x020A и 0x0300-0x030A)
+                        new_ram = list(self.processor.memory.ram)
+                        for i in range(size_a + 1):
+                            addr = 0x0200 + i
+                            if addr < len(new_ram):
+                                new_ram[addr] = 0
+                        for i in range(size_b + 1):
+                            addr = 0x0300 + i
+                            if addr < len(new_ram):
+                                new_ram[addr] = 0
+                        self.processor.memory.ram = new_ram
+                # Сбрасываем счетчик для постепенной записи
+                self._task_data_write_index = 0
             else:
                 self.task_manager.setup_task_data(self.processor, task_id)
-            
-            # КРИТИЧНО: Для задачи 1 НЕ записываем данные в память при загрузке
-            # Данные будут записаны при первом execute_step перед выполнением команды
-            if task_id == 1:
-                # Получаем ожидаемые данные из test_data задачи для определения размера памяти
-                test_data = task["test_data"]
-                if test_data and len(test_data) >= 2:
-                    size = test_data[0]
-                    elements = test_data[1:1 + size]
-                    expected_data = [size] + elements  # [размер, элемент1, элемент2, ...]
-                    
-                    # Вычисляем требуемый размер памяти динамически
-                    required_size = 0x0100 + len(expected_data) + 1  # До последнего элемента включительно
-                    if len(self.processor.memory.ram) < required_size:
-                        print(f"DEBUG load_task: Расширяем память до {required_size} для задачи 1")
-                        new_ram = list(self.processor.memory.ram) if self.processor.memory.ram else [0] * required_size
-                        while len(new_ram) < required_size:
-                            new_ram.append(0)
-                        self.processor.memory.ram = new_ram
-                    
-                    # Очищаем область данных задачи (0x0100 и далее), чтобы данные были записаны только при первом execute_step
-                    print(f"DEBUG load_task: Для задачи 1 очищаем память - данные будут записаны при первом execute_step")
-                    new_ram = list(self.processor.memory.ram)
-                    for i in range(len(expected_data)):
-                        addr = 0x0100 + i
-                        if addr < len(new_ram):
-                            new_ram[addr] = 0
-                    self.processor.memory.ram = new_ram
-                    print(f"DEBUG load_task: Память очищена для задачи 1, данные будут записаны при первом execute_step")
-            
-            # КРИТИЧНО: Для задачи 2 НЕ записываем данные в память при загрузке
-            # Данные будут записаны при первом execute_step перед выполнением команды
-            elif task_id == 2:
-                # Получаем ожидаемые данные из test_data задачи для определения размера памяти
-                test_data = task["test_data"]
-                if test_data and len(test_data) >= 2:
-                    # Формат: [size_a, a1..aN, size_b, b1..bM]
-                    size_a = test_data[0]
-                    a_vals = test_data[1:1 + size_a]
-                    size_b = test_data[1 + size_a]
-                    b_vals = test_data[2 + size_a:2 + size_a + size_b]
-                    
-                    # Вычисляем требуемый размер памяти
-                    required_size = max(0x020A, 0x030A) + 2
-                    if len(self.processor.memory.ram) < required_size:
-                        print(f"DEBUG load_task: Расширяем память до {required_size} для задачи 2")
-                        new_ram = list(self.processor.memory.ram) if self.processor.memory.ram else [0] * required_size
-                        while len(new_ram) < required_size:
-                            new_ram.append(0)
-                        self.processor.memory.ram = new_ram
-                    
-                    # Очищаем область данных задачи (0x0200-0x020A и 0x0300-0x030A), чтобы данные были записаны только при первом execute_step
-                    print(f"DEBUG load_task: Для задачи 2 очищаем память - данные будут записаны при первом execute_step")
-                    new_ram = list(self.processor.memory.ram)
-                    # Очищаем массив A (0x0200-0x020A)
-                    for i in range(size_a + 1):
-                        addr = 0x0200 + i
-                        if addr < len(new_ram):
-                            new_ram[addr] = 0
-                    # Очищаем массив B (0x0300-0x030A)
-                    for i in range(size_b + 1):
-                        addr = 0x0300 + i
-                        if addr < len(new_ram):
-                            new_ram[addr] = 0
-                    self.processor.memory.ram = new_ram
-                    print(f"DEBUG load_task: Память очищена для задачи 2, данные будут записаны при первом execute_step")
+                self._task_data_write_index = 0
             
             self.current_task = task_id
-            self._task_data_write_index = 0  # Сбрасываем счетчик при загрузке задачи
             
             return {
                 "success": True,

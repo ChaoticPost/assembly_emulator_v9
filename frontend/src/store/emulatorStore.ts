@@ -131,9 +131,17 @@ export const useEmulatorStore = create<{
     loadState: async () => {
         try {
             set({ loading: true, error: null });
+            console.log('[loadState] Загружаем состояние эмулятора...');
             const state = await apiService.getState();
+            console.log('[loadState] Состояние загружено:', {
+                ramLength: state.memory?.ram?.length || 0,
+                ramFirstBytes: state.memory?.ram?.slice(0, 10) || [],
+                ramAt0x0100: state.memory?.ram?.[0x0100] || 'N/A',
+                pc: state.processor?.program_counter || 0
+            });
             set({ state, loading: false });
         } catch (error) {
+            console.error('[loadState] Ошибка загрузки состояния:', error);
             set({
                 error: error instanceof Error ? error.message : 'Ошибка загрузки состояния',
                 loading: false

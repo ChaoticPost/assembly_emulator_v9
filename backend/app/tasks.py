@@ -1,5 +1,5 @@
 """
-Предустановленные задачи для эмулятора двухадресного RISC процессора
+Предустановленные задачи для эмулятора одноадресного RISC процессора
 """
 from typing import List, Dict, Any
 from .processor import RISCProcessor

@@ -1,6 +1,28 @@
 import type { EmulatorState, ExecuteRequest, TaskInfo } from '../types/emulator';
 
-const API_BASE_URL = 'http://localhost:8000';
+// Используем переменную окружения или определяем автоматически
+const getApiBaseUrl = (): string => {
+  // Если задана переменная окружения VITE_API_URL, используем её
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Если фронтенд работает не на localhost, используем тот же хост для бэкенда
+  const hostname = window.location.hostname;
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:8000`;
+  }
+
+  // По умолчанию localhost
+  return 'http://localhost:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Логируем используемый адрес API для отладки
+console.log('[API] Используется адрес API:', API_BASE_URL);
+console.log('[API] Текущий hostname:', window.location.hostname);
+console.log('[API] Текущий URL:', window.location.href);
 
 class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

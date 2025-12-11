@@ -1,5 +1,5 @@
 """
-FastAPI приложение для эмулятора двухадресного RISC процессора
+FastAPI приложение для эмулятора одноадресного RISC процессора
 """
 import re
 from fastapi import FastAPI, HTTPException
@@ -167,16 +167,18 @@ async def lifespan(app: FastAPI):
     emulator = None
 
 app = FastAPI(
-    title="Эмулятор двухадресного RISC процессора",
-    description="Backend для эмулятора двухадресного RISC процессора с архитектурой Фон-Неймана",
+    title="Эмулятор одноадресного RISC процессора",
+    description="Backend для эмулятора одноадресного RISC процессора с архитектурой Фон-Неймана",
     version="2.0.0",
     lifespan=lifespan
 )
 
 # CORS middleware
+# Разрешаем подключения с любых источников для работы по сети
+# В продакшене можно ограничить конкретными доменами
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],  # Разрешаем все источники для работы по сети
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -185,7 +187,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     """Корневой endpoint"""
-    return {"message": "Эмулятор двухадресного RISC процессора API"}
+    return {"message": "Эмулятор одноадресного RISC процессора API"}
 
 @app.get("/api/state", response_model=EmulatorState)
 async def get_state():
