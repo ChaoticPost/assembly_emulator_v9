@@ -1,5 +1,8 @@
 # Эмулятор одноадресного процессора с архитектурой Фон-Неймана
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/ChaoticPost/assembly_emulator_v9)
+[![Version](https://img.shields.io/badge/Version-9.0.0-green)](https://github.com/ChaoticPost/assembly_emulator_v9)
+
 ## Описание проекта
 
 Данный проект представляет собой полнофункциональный веб-эмулятор одноадресного процессора с архитектурой Фон-Неймана. Эмулятор реализует систему команд с фиксированной длиной, поддерживает различные режимы адресации и включает в себя ассемблер для компиляции исходного кода в машинные инструкции.
@@ -1158,7 +1161,7 @@ DEBUG _get_operand_value DIRECT: operand=0x1000, value=0x0007, memory[0x1000]=0x
 ### Структура проекта
 
 ```
-assembly_emulator_v2/
+assembly_emulator_v9/
 ├── backend/              # Backend приложение
 │   ├── app/              # Основной код приложения
 │   ├── requirements.txt  # Python зависимости
@@ -1173,8 +1176,9 @@ assembly_emulator_v2/
 
 ---
 
-**Версия:** 2.0.0  
-**Последнее обновление:** 2024
+**Версия:** 9.0.0  
+**Репозиторий:** [https://github.com/ChaoticPost/assembly_emulator_v9](https://github.com/ChaoticPost/assembly_emulator_v9)  
+**Последнее обновление:** 2025
 
 ### История изменений
 
